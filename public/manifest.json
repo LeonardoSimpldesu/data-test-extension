@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Test Data DevTools",
+  "description": "Gere dados sintéticos para desenvolvimento e QA diretamente no Chrome DevTools.",
+  "version": "0.1.2",
+  "devtools_page": "src/devtools/devtools.html",
+  "action": {
+    "default_title": "Gerar dados de teste",
+    "default_popup": "src/popup/index.html"
+  },
+  "permissions": ["storage", "contextMenus", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "assets/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["assets/content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {}
+}

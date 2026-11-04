@@ -30,7 +30,7 @@ npm run build
 
 Depois de um novo build, use **Recarregar** em `chrome://extensions`. Se o Chrome continuar exibindo um erro antigo do service worker, remova a instalação anterior e carregue novamente a pasta `dist`; o manifesto atual aponta para `assets/background.js`, que é um bundle autocontido.
 
-Também é possível clicar no ícone da extensão na barra do Chrome para abrir o popup **Test Data**. O popup reutiliza os mesmos geradores, histórico e ações do painel DevTools e é indicado para gerar um valor sem abrir as ferramentas do desenvolvedor.
+Também é possível clicar no ícone da extensão na barra do Chrome para abrir o popup **Test Data**. O popup reutiliza os mesmos geradores e ações do painel DevTools e é indicado para gerar um valor sem abrir as ferramentas do desenvolvedor. Ele é organizado em **Buscar**, **Favoritos**, **Resultado** e **Todos os campos** (com os presets recolhidos ao final) e não exibe o histórico. Clique na estrela (☆) de um gerador para fixá-lo em **Favoritos**; os favoritos são salvos nas preferências locais. No popup, clicar em um gerador já seleciona e gera um novo valor imediatamente.
 
 Para CPF, CNPJ, CEP, telefone e data/hora, use a opção **Usar máscara** para alternar entre os formatos legível e sem máscara. O gerador **Data** usa `YYYY-MM-DD` sem máscara para funcionar diretamente com `<input type="date">`. Para cartões, escolha a bandeira e, quando necessário, desative a máscara para copiar somente os dígitos. Os cartões disponíveis são números conhecidos de teste de Visa, Mastercard, American Express e Elo.
 

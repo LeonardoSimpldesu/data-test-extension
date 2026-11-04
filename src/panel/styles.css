@@ -28,8 +28,14 @@ h1, h2, p { margin: 0; } h1 { font-size: 22px; } h2 { font-size: 15px; }
 .preset-section .generator-grid { margin: 0; padding: 0 16px 16px; }
 button { border: 1px solid #374151; border-radius: 6px; background: #1f2937; color: #d1d5db; cursor: pointer; padding: 9px 12px; }
 button:hover { border-color: #60a5fa; } button:disabled { cursor: not-allowed; opacity: .45; }
-.generator { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; min-height: 58px; }
+.generator { position: relative; display: flex; border: 1px solid #374151; border-radius: 6px; background: #1f2937; min-height: 58px; }
+.generator:hover { border-color: #60a5fa; }
+.generator-select { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 3px; border: 0; background: transparent; text-align: left; min-width: 0; }
+.generator-select:has(+ .pin-button) { padding-right: 32px; }
 .generator small, .section-heading small { color: #9ca3af; } .generator.selected { border-color: #60a5fa; background: #172554; }
+.pin-button { position: absolute; top: 4px; right: 4px; border: 0; background: transparent; color: #6b7280; font-size: 15px; line-height: 1; padding: 4px 6px; }
+.pin-button:hover { color: #fcd34d; } .pin-button.pinned { color: #fbbf24; }
+.favorites-section .generator-grid { margin: 14px 0 16px; }
 .result-card, .history { border: 1px solid #374151; border-radius: 8px; background: #182233; padding: 16px; margin-bottom: 16px; }
 .result-card output { display: block; overflow: auto; max-height: 360px; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 48px; margin: 18px 0; padding: 14px; border-radius: 5px; background: #0f172a; color: #f9fafb; font: 15px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .options { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin: -6px 0 16px; color: #d1d5db; }

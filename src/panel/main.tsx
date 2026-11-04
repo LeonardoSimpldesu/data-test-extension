@@ -22,12 +22,17 @@ export function App({ popup = false }: { popup?: boolean }) {
   const [formFields, setFormFields] = useState<FormFieldInfo[]>([]);
   const [passwordLength, setPasswordLength] = useState(12);
   const [textLength, setTextLength] = useState(6);
+  const [favorites, setFavorites] = useState<GeneratorId[]>([]);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const selected = generators.find((generator) => generator.id === selectedId) ?? generators[0];
   const normalizedSearch = search.trim().toLowerCase();
   const matchesSearch = (generator: typeof generators[number]) =>
     !normalizedSearch || `${generator.label} ${generator.description} ${generator.category}`.toLowerCase().includes(normalizedSearch);
   const fieldGenerators = generators.filter((generator) => generator.category !== "Presets" && matchesSearch(generator));
   const presetGenerators = generators.filter((generator) => generator.category === "Presets" && matchesSearch(generator));
+  const favoriteGenerators = favorites
+    .map((id) => generators.find((generator) => generator.id === id))
+    .filter((generator): generator is typeof generators[number] => Boolean(generator) && matchesSearch(generator!));
 
   useEffect(() => {
     loadHistory().then(setHistory).catch(() => setHistory([]));
@@ -37,12 +42,45 @@ export function App({ popup = false }: { popup?: boolean }) {
       setPasswordLength(preferences.passwordLength);
       setTextLength(preferences.textLength);
       setBatchSize(preferences.batchSize);
-    }).catch(() => setMessage("Não foi possível carregar as preferências."));
+      setFavorites(preferences.favorites.filter((id) => generators.some((generator) => generator.id === id)));
+    }).catch(() => setMessage("Não foi possível carregar as preferências."))
+      .finally(() => setPreferencesLoaded(true));
   }, []);
 
   useEffect(() => {
-    savePreferences({ masked, cardBrand, passwordLength, textLength, batchSize }).catch(() => setMessage("Não foi possível salvar as preferências."));
-  }, [masked, cardBrand, passwordLength, textLength, batchSize]);
+    if (!preferencesLoaded) return;
+    savePreferences({ masked, cardBrand, passwordLength, textLength, batchSize, favorites }).catch(() => setMessage("Não foi possível salvar as preferências."));
+  }, [preferencesLoaded, masked, cardBrand, passwordLength, textLength, batchSize, favorites]);
+
+  const toggleFavorite = (id: GeneratorId) => {
+    setFavorites((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  };
+
+  const selectGenerator = (generator: typeof generators[number]) => {
+    setSelectedId(generator.id);
+    if (popup) void generate(generator);
+  };
+
+  const renderGeneratorCard = (generator: typeof generators[number], detail: string) => {
+    const favorite = favorites.includes(generator.id);
+    return (
+      <div class={generator.id === selectedId ? "generator selected" : "generator"} key={generator.id}>
+        <button class="generator-select" onClick={() => selectGenerator(generator)}>
+          <strong>{generator.label}</strong>
+          <small>{detail}</small>
+        </button>
+        {popup && (
+          <button
+            class={favorite ? "pin-button pinned" : "pin-button"}
+            onClick={() => toggleFavorite(generator.id)}
+            title={favorite ? "Desafixar" : "Fixar nos favoritos"}
+            aria-label={favorite ? `Desafixar ${generator.label}` : `Fixar ${generator.label}`}
+            aria-pressed={favorite}
+          >{favorite ? "★" : "☆"}</button>
+        )}
+      </div>
+    );
+  };
 
   const generate = async (generator = selected) => {
     const value: GeneratedValue = {
@@ -179,34 +217,54 @@ export function App({ popup = false }: { popup?: boolean }) {
     setHistory([]);
   };
 
-  return (
-    <main>
-      <header>
-        <div>
-          <p class="eyebrow">{popup ? "EXTENSÃO" : "DEVTOOLS"}</p>
-          <h1>Test Data</h1>
-        </div>
-        <span class="offline">Offline</span>
-      </header>
-      <label class="search">
-        <span class="eyebrow">BUSCAR</span>
-        <input value={search} onInput={(event) => setSearch((event.currentTarget as HTMLInputElement).value)} placeholder="Ex.: CPF, API, financeiro..." />
-      </label>
-      <section class="generator-section">
-        <div class="section-heading section-title">
-          <div><span class="eyebrow">CAMPOS</span><h2>Geradores de campo</h2></div>
-          <small>Valores individuais</small>
-        </div>
-        <div class="generator-grid">
-        {fieldGenerators.length > 0 ? fieldGenerators.map((generator) => (
-          <button class={generator.id === selectedId ? "generator selected" : "generator"} onClick={() => setSelectedId(generator.id)}>
-            <strong>{generator.label}</strong>
-            <small>{generator.category}</small>
-          </button>
-        )) : <p class="empty">Nenhum gerador de campo encontrado.</p>}
-        </div>
-      </section>
-      {!popup && <section class="form-mapper">
+  const searchBlock = (
+    <label class="search">
+      <span class="eyebrow">BUSCAR</span>
+      <input value={search} onInput={(event) => setSearch((event.currentTarget as HTMLInputElement).value)} placeholder="Ex.: CPF, API, financeiro..." />
+    </label>
+  );
+
+  const favoritesBlock = (
+    <section class="generator-section favorites-section">
+      <div class="section-heading section-title">
+        <div><span class="eyebrow">FIXOS</span><h2>Favoritos</h2></div>
+        <small>Clique na ☆ para fixar</small>
+      </div>
+      <div class="generator-grid">
+        {favoriteGenerators.length > 0
+          ? favoriteGenerators.map((generator) => renderGeneratorCard(generator, generator.category))
+          : <p class="empty">{favorites.length > 0 ? "Nenhum favorito corresponde à busca." : "Nenhum campo fixado ainda."}</p>}
+      </div>
+    </section>
+  );
+
+  const fieldsBlock = (
+    <section class="generator-section">
+      <div class="section-heading section-title">
+        <div><span class="eyebrow">CAMPOS</span><h2>{popup ? "Todos os campos" : "Geradores de campo"}</h2></div>
+        <small>Valores individuais</small>
+      </div>
+      <div class="generator-grid">
+      {fieldGenerators.length > 0
+        ? fieldGenerators.map((generator) => renderGeneratorCard(generator, generator.category))
+        : <p class="empty">Nenhum gerador de campo encontrado.</p>}
+      </div>
+    </section>
+  );
+
+  const presetsBlock = (
+    <details class="preset-section">
+      <summary><span><span class="eyebrow">PRESETS</span><strong>Conjuntos de dados</strong></span><small>Opcional</small></summary>
+      <div class="generator-grid">
+        {presetGenerators.length > 0
+          ? presetGenerators.map((generator) => renderGeneratorCard(generator, generator.description))
+          : <p class="empty">Nenhum preset encontrado.</p>}
+      </div>
+    </details>
+  );
+
+  const formMapperBlock = (
+      <section class="form-mapper">
         <div class="section-heading">
           <div><span class="eyebrow">FORMULÁRIO</span><h2>Preenchimento em lote</h2></div>
           <button onClick={mapForm}>Mapear campos</button>
@@ -220,18 +278,10 @@ export function App({ popup = false }: { popup?: boolean }) {
           ))}
           <button class="primary" onClick={fillMappedForm}>Preencher selecionados</button>
         </div>}
-      </section>}
-      <details class="preset-section">
-        <summary><span><span class="eyebrow">PRESETS</span><strong>Conjuntos de dados</strong></span><small>Opcional</small></summary>
-        <div class="generator-grid">
-          {presetGenerators.length > 0 ? presetGenerators.map((generator) => (
-            <button class={generator.id === selectedId ? "generator selected" : "generator"} onClick={() => setSelectedId(generator.id)}>
-              <strong>{generator.label}</strong>
-              <small>{generator.description}</small>
-            </button>
-          )) : <p class="empty">Nenhum preset encontrado.</p>}
-        </div>
-      </details>
+      </section>
+  );
+
+  const resultBlock = (
       <section class="result-card">
         <div class="section-heading">
           <div><span class="eyebrow">RESULTADO</span><h2>{selected.label}</h2></div>
@@ -282,6 +332,9 @@ export function App({ popup = false }: { popup?: boolean }) {
         {message && <p class="feedback" role="status">{message}</p>}
         {validation && <p class={validation === "Valor válido." ? "feedback" : "validation"} role="status">{validation}</p>}
       </section>
+  );
+
+  const historyBlock = (
       <section class="history">
         <div class="section-heading"><div><span class="eyebrow">HISTÓRICO</span><h2>Últimos valores</h2></div><button class="link-button" onClick={clear}>Limpar</button></div>
         {history.length === 0 ? <p class="empty">Nenhum valor gerado ainda.</p> : <ul>{history.map((item) => (
@@ -297,6 +350,35 @@ export function App({ popup = false }: { popup?: boolean }) {
           </li>
         ))}</ul>}
       </section>
+  );
+
+  return (
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">{popup ? "EXTENSÃO" : "DEVTOOLS"}</p>
+          <h1>Test Data</h1>
+        </div>
+        <span class="offline">Offline</span>
+      </header>
+      {popup ? (
+        <>
+          {searchBlock}
+          {favoritesBlock}
+          {resultBlock}
+          {fieldsBlock}
+          {presetsBlock}
+        </>
+      ) : (
+        <>
+          {searchBlock}
+          {fieldsBlock}
+          {formMapperBlock}
+          {presetsBlock}
+          {resultBlock}
+          {historyBlock}
+        </>
+      )}
       <p class="notice">Os valores são sintéticos e destinados somente a ambientes de desenvolvimento e teste.</p>
     </main>
   );

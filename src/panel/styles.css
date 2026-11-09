@@ -55,3 +55,8 @@ button:hover { border-color: #60a5fa; } button:disabled { cursor: not-allowed; o
 .history-item { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 4px; background: transparent; padding: 0; text-align: left; }
 .history-item:hover { background: #24324a; }
 .empty, .notice { color: #9ca3af; } .empty { margin-top: 15px; } .notice { font-size: 11px; margin-top: 18px; }
+.store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px; margin: 14px 0 16px; }
+.store-button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; }
+.store-button small { color: #9ca3af; }
+.store-button.current { border-color: #22c55e; }
+.store-button.current small { color: #86efac; }

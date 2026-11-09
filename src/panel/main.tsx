@@ -5,6 +5,8 @@ import { loadHistory, saveHistory, clearHistory } from "../storage/history";
 import { defaultPreferences, loadPreferences, savePreferences } from "../storage/preferences";
 import type { CardBrand, GeneratedValue, GeneratorId, GeneratorOptions } from "../shared/types";
 import { fillFormFields, inspectActiveField, insertIntoInspectedPage, listFormFields, type ActiveFieldInfo, type FormFieldInfo } from "../devtools/insert";
+import { MAGENTO_CREATE_PATH, MAGENTO_FORM_SELECTOR, buildStoreFillSteps, generateStoreCustomer, storeForUrl, stores, type StorePreset } from "../stores";
+import type { FillStoreMessage, FillStoreResponse } from "../shared/fill-form";
 import "./styles.css";
 
 export function App({ popup = false }: { popup?: boolean }) {
@@ -24,12 +26,15 @@ export function App({ popup = false }: { popup?: boolean }) {
   const [textLength, setTextLength] = useState(6);
   const [favorites, setFavorites] = useState<GeneratorId[]>([]);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
+  const [fillingStoreId, setFillingStoreId] = useState<string | null>(null);
   const selected = generators.find((generator) => generator.id === selectedId) ?? generators[0];
   const normalizedSearch = search.trim().toLowerCase();
   const matchesSearch = (generator: typeof generators[number]) =>
     !normalizedSearch || `${generator.label} ${generator.description} ${generator.category}`.toLowerCase().includes(normalizedSearch);
   const fieldGenerators = generators.filter((generator) => generator.category !== "Presets" && matchesSearch(generator));
   const presetGenerators = generators.filter((generator) => generator.category === "Presets" && matchesSearch(generator));
+  const matchingStores = stores.filter((store) => !normalizedSearch || `${store.name} loja cadastro formulario formulário`.toLowerCase().includes(normalizedSearch));
   const favoriteGenerators = favorites
     .map((id) => generators.find((generator) => generator.id === id))
     .filter((generator): generator is typeof generators[number] => Boolean(generator) && matchesSearch(generator!));
@@ -48,9 +53,53 @@ export function App({ popup = false }: { popup?: boolean }) {
   }, []);
 
   useEffect(() => {
+    if (!popup) return;
+    chrome.tabs.query({ active: true, currentWindow: true })
+      .then(([tab]) => setActiveStoreId(storeForUrl(tab?.url)?.id ?? null))
+      .catch(() => setActiveStoreId(null));
+  }, [popup]);
+
+  useEffect(() => {
     if (!preferencesLoaded) return;
     savePreferences({ masked, cardBrand, passwordLength, textLength, batchSize, favorites }).catch(() => setMessage("Não foi possível salvar as preferências."));
   }, [preferencesLoaded, masked, cardBrand, passwordLength, textLength, batchSize, favorites]);
+
+  const fillStore = async (store: StorePreset) => {
+    setFillingStoreId(store.id);
+    setMessage(`Preenchendo cadastro em ${store.name}...`);
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id === undefined) throw new Error("Nenhuma aba ativa encontrada.");
+      const customer = generateStoreCustomer();
+      setSelectedId("person");
+      setBatchResult(null);
+      setValidation(null);
+      setResult({
+        id: crypto.randomUUID(),
+        generatorId: "person",
+        label: `Cadastro ${store.name}`,
+        value: JSON.stringify(customer, null, 2),
+        createdAt: Date.now()
+      });
+      const request: FillStoreMessage = {
+        type: "fill-store-form",
+        tabId: tab.id,
+        formSelector: MAGENTO_FORM_SELECTOR,
+        createPath: MAGENTO_CREATE_PATH,
+        steps: buildStoreFillSteps(store, customer)
+      };
+      const response = await chrome.runtime.sendMessage<FillStoreMessage, FillStoreResponse>(request);
+      if (!response?.ok) throw new Error(response?.error ?? "Não foi possível preencher o formulário.");
+      if (!response.report.formFound) {
+        throw new Error("Formulário de cadastro não encontrado. Se você estiver logado na loja, saia da conta e tente novamente.");
+      }
+      setMessage(`${store.name}: ${response.report.filled.length} campo(s) preenchido(s). Revise e envie o formulário.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível preencher o formulário.");
+    } finally {
+      setFillingStoreId(null);
+    }
+  };
 
   const toggleFavorite = (id: GeneratorId) => {
     setFavorites((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
@@ -238,6 +287,29 @@ export function App({ popup = false }: { popup?: boolean }) {
     </section>
   );
 
+  const storesBlock = (
+    <section class="generator-section stores-section">
+      <div class="section-heading section-title">
+        <div><span class="eyebrow">LOJAS</span><h2>Cadastro de cliente</h2></div>
+        <small>Preenche na aba atual (local, HML ou produção)</small>
+      </div>
+      <div class="store-grid">
+        {matchingStores.length > 0 ? matchingStores.map((store) => (
+          <button
+            key={store.id}
+            class={store.id === activeStoreId ? "store-button current" : "store-button"}
+            onClick={() => fillStore(store)}
+            disabled={fillingStoreId !== null}
+            title={`Preencher o cadastro de cliente com o mapeamento da ${store.name}`}
+          >
+            <strong>{store.name}</strong>
+            <small>{fillingStoreId === store.id ? "Preenchendo..." : store.id === activeStoreId ? "Loja da aba atual" : "Preencher cadastro"}</small>
+          </button>
+        )) : <p class="empty">Nenhuma loja encontrada.</p>}
+      </div>
+    </section>
+  );
+
   const fieldsBlock = (
     <section class="generator-section">
       <div class="section-heading section-title">
@@ -284,7 +356,7 @@ export function App({ popup = false }: { popup?: boolean }) {
   const resultBlock = (
       <section class="result-card">
         <div class="section-heading">
-          <div><span class="eyebrow">RESULTADO</span><h2>{selected.label}</h2></div>
+          <div><span class="eyebrow">RESULTADO</span><h2>{result && !batchResult ? result.label : selected.label}</h2></div>
           <small>{selected.description}</small>
         </div>
         <output>{batchResult ?? result?.value ?? "Clique em gerar para criar um valor"}</output>
@@ -365,6 +437,7 @@ export function App({ popup = false }: { popup?: boolean }) {
         <>
           {searchBlock}
           {favoritesBlock}
+          {storesBlock}
           {resultBlock}
           {fieldsBlock}
           {presetsBlock}

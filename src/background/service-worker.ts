@@ -1,3 +1,5 @@
+import { fillFormInPage, probeStorePage, type FillReport, type FillStoreMessage, type FillStoreResponse, type PageProbe } from "../shared/fill-form";
+
 const firstNames = ["Ana", "Bruno", "Carolina", "Daniel", "Mariana", "Rafael", "Sofia", "Thiago"];
 const lastNames = ["Almeida", "Barbosa", "Carvalho", "Ferreira", "Oliveira", "Ribeiro", "Santos", "Souza"];
 const pick = <T>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
@@ -113,3 +115,80 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
   });
 });
+
+chrome.runtime.onMessage.addListener((message: Partial<FillStoreMessage>, _sender, sendResponse) => {
+  if (message.type !== "fill-store-form" || typeof message.tabId !== "number" || !Array.isArray(message.steps)) return;
+  fillStoreForm(message as FillStoreMessage)
+    .then((report) => sendResponse({ ok: true, report } satisfies FillStoreResponse))
+    .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) } satisfies FillStoreResponse));
+  return true;
+});
+
+async function fillStoreForm({ tabId, formSelector, createPath, steps }: FillStoreMessage): Promise<FillReport> {
+  // Preenche no domínio que estiver aberto na aba (produção, HML ou local), nunca em uma URL fixa.
+  const probe = await probeTab(tabId, formSelector);
+  let settleMs = 0;
+  if (!probe.hasForm) {
+    if (!probe.isMagento) {
+      throw new Error("A aba atual não é uma loja Magento. Abra o site da loja (local, HML ou produção) e tente novamente.");
+    }
+    await navigateAndWait(tabId, new URL(createPath, probe.origin).href);
+    // Após navegar, aguarda os scripts da loja (máscaras, busca de CEP) inicializarem.
+    settleMs = 1500;
+  }
+  try {
+    return await injectFill(tabId, steps, formSelector, settleMs);
+  } catch {
+    // Algumas lojas redirecionam logo após carregar, destruindo o contexto da página. Tenta mais uma vez.
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return injectFill(tabId, steps, formSelector, settleMs);
+  }
+}
+
+async function probeTab(tabId: number, formSelector: string): Promise<PageProbe> {
+  try {
+    const [injection] = await chrome.scripting.executeScript({ target: { tabId }, func: probeStorePage, args: [formSelector] });
+    const probe = injection?.result as PageProbe | undefined;
+    if (probe) return probe;
+  } catch {
+    // Páginas como chrome:// e a Chrome Web Store não permitem injeção de scripts.
+  }
+  throw new Error("Não é possível preencher nesta aba. Abra o site da loja (local, HML ou produção).");
+}
+
+async function injectFill(tabId: number, steps: FillStoreMessage["steps"], formSelector: string, settleMs: number): Promise<FillReport> {
+  const [injection] = await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    func: fillFormInPage,
+    args: [steps, formSelector, settleMs]
+  });
+  const report = injection?.result as FillReport | undefined;
+  if (!report) throw new Error("A página não retornou o resultado do preenchimento.");
+  return report;
+}
+
+function navigateAndWait(tabId: number, url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let started = false;
+    const timeout = setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      reject(new Error("A página de cadastro demorou demais para carregar."));
+    }, 30000);
+    const listener = (updatedTabId: number, changeInfo: { status?: string }) => {
+      if (updatedTabId !== tabId) return;
+      if (changeInfo.status === "loading") started = true;
+      if (started && changeInfo.status === "complete") {
+        clearTimeout(timeout);
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    chrome.tabs.update(tabId, { url }).catch((error: unknown) => {
+      clearTimeout(timeout);
+      chrome.tabs.onUpdated.removeListener(listener);
+      reject(error);
+    });
+  });
+}

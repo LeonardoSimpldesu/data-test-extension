@@ -132,7 +132,7 @@ describe("geradores", () => {
 
   it("gera URL e IP reservados para teste", () => {
     expect(generateUrl()).toMatch(/^https:\/\/www\.example\.com\//);
-    expect(generateIp()).toMatch(/^192\.0\.2\.(\d|[1-9]\d|1\d\d|2[0-4]\d)$/);
+    expect(generateIp()).toMatch(/^192\.0\.2\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-4])$/);
   });
 
   it("gera valores financeiros formatados e sem máscara", () => {

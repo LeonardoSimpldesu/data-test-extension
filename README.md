@@ -50,15 +50,15 @@ O preset **Erro de API** gera respostas HTTP sintéticas com status `400`, `401`
 
 Os geradores de CPF, CNPJ, CEP, telefone, e-mail e UUID possuem o botão **Validar**, que verifica o resultado atual sem modificá-lo.
 
-Os geradores técnicos **URL** e **IP** usam `example.com` e a faixa IPv4 `192.0.2.0/24`, reservados para documentação e testes.
+O gerador técnico **IP** usa a faixa IPv4 `192.0.2.0/24`, reservada para documentação e testes.
 
-Os geradores financeiros **Valor monetário** e **Percentual** aceitam máscara brasileira (`R$ 1.234,56` e `12,50%`) ou valores sem formatação (`1234.56` e `12.50`).
+Os geradores **Valor monetário**, **URL**, **Percentual**, **Booleano**, **Número inteiro** e **Senha** ficam ocultos das listas de seleção do popup e do painel. Eles continuam sendo usados pelos presets JSON (por exemplo, a `senha` da **Pessoa física**) e pelo preenchimento automático do painel (**Detectar campo** e **Mapear campos**). Para voltar a exibir um deles, remova `hidden: true` da definição em `src/generators/index.ts`.
 
-Também estão disponíveis os geradores técnicos **Booleano**, **Número inteiro** e **Cor hexadecimal**, úteis para payloads e regras de interface.
+Também está disponível o gerador técnico **Cor hexadecimal**, útil para payloads e regras de interface.
 
 O gerador **Timestamp** atende testes de logs e integrações usando milissegundos Unix.
 
-O gerador **Senha** aceita tamanhos entre 4 e 64 caracteres. O gerador **Texto aleatório** permite controlar a quantidade de dígitos do sufixo.
+O gerador **Texto aleatório** permite controlar a quantidade de dígitos do sufixo.
 
 As preferências de máscara, bandeira do cartão, tamanhos e quantidade do lote são salvas localmente pela extensão e restauradas na próxima abertura.
 

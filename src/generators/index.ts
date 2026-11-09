@@ -296,12 +296,12 @@ export const generators: GeneratorDefinition[] = [
   { id: "edge-cases", label: "Casos de borda", category: "Presets", description: "Valores para testar validações", generate: generateEdgeCasesPreset },
   { id: "api-response", label: "Resposta de API", category: "Presets", description: "Payload paginado para APIs", generate: generateApiResponsePreset },
   { id: "api-error", label: "Erro de API", category: "Presets", description: "Respostas HTTP de erro", generate: generateApiErrorPreset },
-  { id: "url", label: "URL", category: "Técnico", description: "URL de domínio reservado", generate: generateUrl },
+  { id: "url", label: "URL", category: "Técnico", description: "URL de domínio reservado", hidden: true, generate: generateUrl },
   { id: "ip", label: "IP", category: "Técnico", description: "IPv4 reservado para documentação", generate: generateIp },
-  { id: "currency", label: "Valor monetário", category: "Financeiro", description: "Valor em reais", generate: (options = { masked: true }) => generateCurrency(options.masked) },
-  { id: "percentage", label: "Percentual", category: "Financeiro", description: "Percentual de 0 a 100", generate: (options = { masked: true }) => generatePercentage(options.masked) },
-  { id: "boolean", label: "Booleano", category: "Técnico", description: "true ou false", generate: generateBoolean },
-  { id: "integer", label: "Número inteiro", category: "Técnico", description: "Inteiro entre -1000 e 1000", generate: generateInteger },
+  { id: "currency", label: "Valor monetário", category: "Financeiro", description: "Valor em reais", hidden: true, generate: (options = { masked: true }) => generateCurrency(options.masked) },
+  { id: "percentage", label: "Percentual", category: "Financeiro", description: "Percentual de 0 a 100", hidden: true, generate: (options = { masked: true }) => generatePercentage(options.masked) },
+  { id: "boolean", label: "Booleano", category: "Técnico", description: "true ou false", hidden: true, generate: generateBoolean },
+  { id: "integer", label: "Número inteiro", category: "Técnico", description: "Inteiro entre -1000 e 1000", hidden: true, generate: generateInteger },
   { id: "hex-color", label: "Cor hexadecimal", category: "Técnico", description: "Cor no formato #RRGGBB", generate: generateHexColor },
   { id: "timestamp", label: "Timestamp", category: "Técnico", description: "Timestamp Unix em milissegundos", generate: generateTimestamp },
   { id: "name", label: "Nome completo", category: "Pessoal", description: "Nome brasileiro sintético", generate: generateName },
@@ -315,9 +315,12 @@ export const generators: GeneratorDefinition[] = [
   { id: "email", label: "E-mail", category: "Contato", description: "E-mail com domínio reservado", generate: () => generateEmail() },
   { id: "phone", label: "Telefone", category: "Contato", description: "Celular brasileiro de teste", generate: (options = { masked: false }) => generatePhone(options.masked) },
   { id: "uuid", label: "UUID", category: "Técnico", description: "Identificador UUID v4", generate: () => crypto.randomUUID() },
-  { id: "password", label: "Senha", category: "Técnico", description: "Senha aleatória configurável", generate: (options) => generatePassword(options?.passwordLength) },
+  { id: "password", label: "Senha", category: "Técnico", description: "Senha aleatória configurável", hidden: true, generate: (options) => generatePassword(options?.passwordLength) },
   { id: "datetime", label: "Data e hora", category: "Técnico", description: "Data e hora atual", generate: (options = { masked: false }) => formatDateTime(new Date(), options.masked) },
   { id: "date", label: "Data", category: "Técnico", description: "Data para campos date", generate: (options = { masked: false }) => generateDate(options.masked) },
   { id: "text", label: "Texto aleatório", category: "Técnico", description: "Texto sintético configurável", generate: (options) => `Texto de teste ${digits(Math.max(1, Math.min(32, options?.textLength ?? 6)))}` },
   { id: "credit-card", label: "Cartão de teste", category: "Financeiro", description: "Número reservado para testes", generate: (options = { masked: true }) => generateTestCard(options.cardBrand, options.masked) }
 ];
+
+/** Geradores exibidos nas listas de seleção do popup e do painel. */
+export const visibleGenerators = generators.filter((generator) => !generator.hidden);

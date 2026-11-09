@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCep, formatCnpj, formatCpf, generateAddressPreset, generateApiErrorPreset, generateApiResponsePreset, generateBoolean, generateCep, generateCnpj, generateCompanyPreset, generateCpf, generateCurrency, generateDate, generateEdgeCasesPreset, generateEmail, generateFirstName, generateHexColor, generateInteger, generateIp, generateLastName, generatePassword, generatePercentage, generatePersonPreset, generatePhone, generateTestCard, generateTimestamp, generateUrl, isValidCep, isValidCnpj, isValidCpf, isValidEmail, isValidPhone, isValidUuid } from "./index";
+import { generators, visibleGenerators, formatCep, formatCnpj, formatCpf, generateAddressPreset, generateApiErrorPreset, generateApiResponsePreset, generateBoolean, generateCep, generateCnpj, generateCompanyPreset, generateCpf, generateCurrency, generateDate, generateEdgeCasesPreset, generateEmail, generateFirstName, generateHexColor, generateInteger, generateIp, generateLastName, generatePassword, generatePercentage, generatePersonPreset, generatePhone, generateTestCard, generateTimestamp, generateUrl, isValidCep, isValidCnpj, isValidCpf, isValidEmail, isValidPhone, isValidUuid } from "./index";
 
 describe("geradores", () => {
   it("gera CPF válido e permite formatá-lo", () => {
@@ -152,5 +152,15 @@ describe("geradores", () => {
   it("respeita tamanhos configuráveis de senha e texto", () => {
     expect(generatePassword(24)).toHaveLength(24);
     expect(generatePassword(100)).toHaveLength(64);
+  });
+
+  it("oculta geradores pouco usados das listas, mantendo-os disponíveis", () => {
+    const hiddenIds = ["currency", "url", "percentage", "boolean", "integer", "password"];
+    const visibleIds = new Set(visibleGenerators.map((generator) => generator.id));
+    for (const id of hiddenIds) {
+      expect(visibleIds.has(id as never)).toBe(false);
+      expect(generators.find((generator) => generator.id === id)?.generate()).toBeTruthy();
+    }
+    expect(JSON.parse(generatePersonPreset())).toHaveProperty("senha");
   });
 });

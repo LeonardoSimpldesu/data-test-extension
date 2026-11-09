@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { generators, isValidCep, isValidCnpj, isValidCpf, isValidEmail, isValidPhone, isValidUuid } from "../generators";
+import { generators, visibleGenerators, isValidCep, isValidCnpj, isValidCpf, isValidEmail, isValidPhone, isValidUuid } from "../generators";
 import { loadHistory, saveHistory, clearHistory } from "../storage/history";
 import { defaultPreferences, loadPreferences, savePreferences } from "../storage/preferences";
 import type { CardBrand, GeneratedValue, GeneratorId, GeneratorOptions } from "../shared/types";
@@ -32,11 +32,11 @@ export function App({ popup = false }: { popup?: boolean }) {
   const normalizedSearch = search.trim().toLowerCase();
   const matchesSearch = (generator: typeof generators[number]) =>
     !normalizedSearch || `${generator.label} ${generator.description} ${generator.category}`.toLowerCase().includes(normalizedSearch);
-  const fieldGenerators = generators.filter((generator) => generator.category !== "Presets" && matchesSearch(generator));
-  const presetGenerators = generators.filter((generator) => generator.category === "Presets" && matchesSearch(generator));
+  const fieldGenerators = visibleGenerators.filter((generator) => generator.category !== "Presets" && matchesSearch(generator));
+  const presetGenerators = visibleGenerators.filter((generator) => generator.category === "Presets" && matchesSearch(generator));
   const matchingStores = stores.filter((store) => !normalizedSearch || `${store.name} loja cadastro formulario formulário`.toLowerCase().includes(normalizedSearch));
   const favoriteGenerators = favorites
-    .map((id) => generators.find((generator) => generator.id === id))
+    .map((id) => visibleGenerators.find((generator) => generator.id === id))
     .filter((generator): generator is typeof generators[number] => Boolean(generator) && matchesSearch(generator!));
 
   useEffect(() => {

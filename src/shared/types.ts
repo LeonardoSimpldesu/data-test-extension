@@ -45,6 +45,8 @@ export interface GeneratorDefinition {
   label: string;
   category: GeneratorCategory;
   description: string;
+  /** Oculto das listas de seleção; continua disponível para presets JSON e preenchimento automático. */
+  hidden?: boolean;
   generate: (options?: GeneratorOptions) => string;
 }
 
